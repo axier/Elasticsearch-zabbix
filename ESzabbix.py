@@ -40,7 +40,7 @@ if len(sys.argv) == 4 and sys.argv[2] not in cachekeys + generalkeys:
 
 # Try to establish a connection to elasticsearch
 try:
-    conn = Elasticsearch('d-ci-els1-nd-01.ve-ci.com:9200', sniff_on_start=False)
+    conn = Elasticsearch('localhost:9200', sniff_on_start=False)
 except Exception, e:
     
     zbx_fail()

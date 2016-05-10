@@ -13,27 +13,34 @@ def zbx_fail():
     print "ZBX_NOTSUPPORTED"
     sys.exit(2)
     
-searchkeys = ['query_total', 'fetch_time_in_millis', 'fetch_total', 'fetch_time', 'query_current', 'fetch_current', 'query_time_in_millis']
-getkeys = ['missing_total', 'exists_total', 'current', 'time_in_millis', 'missing_time_in_millis', 'exists_time_in_millis', 'total']
-docskeys = ['count', 'deleted']
+generalkeys  = ['flush', 'refresh']
+searchkeys   = ['query_total', 'fetch_time_in_millis', 'fetch_total', 'fetch_time', 'query_current', 'fetch_current', 'query_time_in_millis']
+getkeys      = ['missing_total', 'exists_total', 'current', 'time_in_millis', 'missing_time_in_millis', 'exists_time_in_millis', 'total']
+docskeys     = ['count', 'deleted']
 indexingkeys = ['delete_time_in_millis', 'index_total', 'index_current', 'delete_total', 'index_time_in_millis', 'delete_current']
-storekeys = ['size_in_bytes', 'throttle_time_in_millis']
-cachekeys = ['filter_size_in_bytes', 'field_size_in_bytes', 'field_evictions']
-clusterkeys = searchkeys + getkeys + docskeys + indexingkeys + storekeys
-returnval = None
+storekeys    = ['size_in_bytes', 'throttle_time_in_millis']
+flushkeys    = ['total_time_in_millis', 'total']
+refreshkeys  = ['total_time_in_millis', 'total']
+cachekeys    = ['id_cache', 'filter_cache', 'fielddata']
+cachevalues  = ['memory_size_in_bytes', 'evictions']
+clusterkeys  = searchkeys + getkeys + docskeys + indexingkeys + storekeys
+returnval    = None
 
 # __main__
 
 # We need to have two command-line args: 
 # sys.argv[1]: The node name or "cluster"
 # sys.argv[2]: The "key" (status, filter_size_in_bytes, etc)
+# sys.argv[3]: The "key only for flush,refresh and cache keys."
 
 if len(sys.argv) < 3:
+    zbx_fail()
+if len(sys.argv) == 4 and sys.argv[2] not in cachekeys + generalkeys:
     zbx_fail()
 
 # Try to establish a connection to elasticsearch
 try:
-    conn = Elasticsearch('localhost:9200', sniff_on_start=False)
+    conn = Elasticsearch('d-ci-els1-nd-01.ve-ci.com:9200', sniff_on_start=False)
 except Exception, e:
     
     zbx_fail()
@@ -109,10 +116,13 @@ else: # Not clusterwide, check the next arg
                 stats = nodestats['nodes'][nodename]['indices']['docs']
             elif sys.argv[2] in searchkeys:
                 stats = nodestats['nodes'][nodename]['indices']['search']
-            elif sys.argv[2] in cachekeys:
-                stats = nodestats['nodes'][nodename]['indices']['cache']
+            elif sys.argv[2] in cachekeys + generalkeys:
+                stats = nodestats['nodes'][nodename]['indices'][sys.argv[2]]
             try:
-                returnval = stats[sys.argv[2]]
+                if len(sys.argv) == 3:
+                    returnval = stats[sys.argv[2]]
+                elif len(sys.argv) == 4:
+                    returnval = stats[sys.argv[3]]
             except Exception, e:
                 pass
 
